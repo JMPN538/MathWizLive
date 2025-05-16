@@ -1,30 +1,53 @@
-function handleLogin(event) {
-    event.preventDefault();
+// login.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore.js";
 
-    var email = document.querySelector('input[name="email"]').value.trim();
-    var password = document.querySelector('input[name="password"]').value;
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBhgFL9kmRQ61RLeq4HqIGimNxoDxCGBHo",
+  authDomain: "mathwiz-3b54e.firebaseapp.com",
+  projectId: "mathwiz-3b54e",
+  storageBucket: "mathwiz-3b54e.appspot.com",
+  messagingSenderId: "560429917669",
+  appId: "1:560429917669:web:401d368b83adc51802fb0c",
+  measurementId: "G-4Z3NRDN21N"
+};
 
-    var users = JSON.parse(localStorage.getItem('users')) || [];
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    var userFound = false;
-    for (var i = 0; i < users.length; i++) {
-        if (users[i].email === email && users[i].password === password) {
-            userFound = true;
-            // Save current user info for profile
-            localStorage.setItem("currentUsername", users[i].username);
-            localStorage.setItem("currentUserEmail", users[i].email);
-            localStorage.setItem("currentUserPassword", users[i].password);
+// Login handler
+async function handleLogin(event) {
+  event.preventDefault();
 
-            window.location.href = "HomePageWithUser.html"; // Adjust as needed
-            break;
-        }
+  const email = document.querySelector('input[name="email"]').value.trim();
+  const password = document.querySelector('input[name="password"]').value;
+
+  try {
+    // Sign in user using Firebase Auth
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Fetch user details from Firestore
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userData = userDoc.exists() ? userDoc.data() : null;
+
+    if (userData) {
+      // Optionally cache username if you need it across pages
+      localStorage.setItem("currentUsername", userData.username);
+      localStorage.setItem("currentUserEmail", userData.email);
     }
 
-    if (!userFound) {
-        document.getElementById('errorMessage').style.display = 'block';
-    } else {
-        document.getElementById('errorMessage').style.display = 'none';
-    }
+    // Redirect after successful login
+    window.location.href = "HomePageWithUser.html";
+  } catch (error) {
+    console.error("Login failed:", error);
+    document.getElementById('errorMessage').style.display = 'block';
+  }
 }
 
+// Add event listener
 document.getElementById('loginButton')?.addEventListener('click', handleLogin);
