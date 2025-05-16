@@ -1,62 +1,53 @@
-// signup.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-auth.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-analytics.js";
-import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBhgFL9kmRQ61RLeq4HqIGimNxoDxCGBHo",
   authDomain: "mathwiz-3b54e.firebaseapp.com",
   projectId: "mathwiz-3b54e",
-  storageBucket: "mathwiz-3b54e.appspot.com", // fixed .app to .com
+  storageBucket: "mathwiz-3b54e.appspot.com",
   messagingSenderId: "560429917669",
   appId: "1:560429917669:web:401d368b83adc51802fb0c",
   measurementId: "G-4Z3NRDN21N"
 };
 
-// Init Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-getAnalytics(app);
 
-// Sign-up logic
-document.getElementById('signUpBtn')?.addEventListener('click', async (event) => {
+document.getElementById('loginButton')?.addEventListener('click', async (event) => {
   event.preventDefault();
 
-  const username = document.querySelector('input[name="username"]').value.trim();
   const email = document.querySelector('input[name="email"]').value.trim();
   const password = document.querySelector('input[name="password"]').value;
-  const confirmPassword = document.querySelector('input[name="confirm-password"]').value;
-
-  if (!username || !email || !password || !confirmPassword) {
-    alert("All fields are required.");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    alert("Passwords do not match.");
-    return;
-  }
+  const errorEl = document.getElementById('errorMessage');
 
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Save username in Firestore (optional but recommended)
-    await setDoc(doc(db, "users", user.uid), {
-      username: username,
-      email: email
-    });
+    if (!user.emailVerified) {
+      await signOut(auth); // Sign out unverified user
+      alert("Please verify your email before logging in. Check your inbox.");
+      return;
+    }
 
-    // Store locally for session/profile use
-    localStorage.setItem("currentUsername", username);
-    localStorage.setItem("currentUserEmail", email);
+    // Get username from Firestore
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+    const userData = userDoc.exists() ? userDoc.data() : null;
 
-    alert("Account created successfully!");
-    window.location.href = "Main Menu.html";
+    if (userData?.username) {
+      // Optional: You can store the name for display (not required if using Firebase auth state elsewhere)
+      console.log("Welcome, " + userData.username);
+    }
+
+    // Proceed to home
+    window.location.href = "HomePageWithUser.html";
+
   } catch (error) {
-    alert("Error: " + error.message);
+    console.error(error);
+    errorEl.style.display = 'block';
+    errorEl.textContent = "Invalid email or password.";
   }
 });
