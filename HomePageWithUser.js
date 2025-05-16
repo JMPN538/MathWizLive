@@ -1,23 +1,52 @@
-window.onload = function() {
-    // Use currentUsername (or fallback to userName)
-    let userName = localStorage.getItem("currentUsername") || localStorage.getItem("userName");
+// HomePageWithUser.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.7.3/firebase-firestore.js";
 
-    if (userName) {
-        document.getElementById("user-name").textContent = `Welcome, ${userName}`;
-        document.getElementById("logout-link").style.display = 'inline'; // use inline or block
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBhgFL9kmRQ61RLeq4HqIGimNxoDxCGBHo",
+  authDomain: "mathwiz-3b54e.firebaseapp.com",
+  projectId: "mathwiz-3b54e",
+  storageBucket: "mathwiz-3b54e.appspot.com",
+  messagingSenderId: "560429917669",
+  appId: "1:560429917669:web:401d368b83adc51802fb0c",
+  measurementId: "G-4Z3NRDN21N"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+window.onload = function () {
+  const userNameElement = document.getElementById("user-name");
+  const logoutLink = document.getElementById("logout-link");
+
+  // Check if user is logged in
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userData = userDoc.exists() ? userDoc.data() : null;
+
+        const username = userData?.username || "User";
+        userNameElement.textContent = `Welcome, ${username}`;
+        logoutLink.style.display = "inline";
+
+        logoutLink.addEventListener("click", async (e) => {
+          e.preventDefault();
+          await signOut(auth);
+          window.location.href = "Home.html"; // Send to non-user version of homepage
+        });
+      } catch (err) {
+        console.error("Failed to load user data:", err);
+        userNameElement.textContent = "Welcome, User";
+        logoutLink.style.display = "none";
+      }
     } else {
-        document.getElementById("user-name").textContent = "Welcome, Guest!";
-        document.getElementById("logout-link").style.display = 'none';
+      userNameElement.textContent = "Welcome, Guest!";
+      logoutLink.style.display = "none";
     }
-
-    // Attach logout listener here to ensure element is loaded
-    document.getElementById("logout-link").addEventListener("click", function(event) {
-        event.preventDefault(); // prevent default link behavior
-        // Clear all user-related data from localStorage
-        localStorage.removeItem("currentUsername");
-        localStorage.removeItem("userName");
-        localStorage.removeItem("currentUserEmail");
-        // Redirect to homepage after logout
-        window.location.href = "Home.html";
-    });
+  });
 };
